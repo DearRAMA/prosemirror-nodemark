@@ -53,6 +53,35 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
             return false;
         }
       },
+      handleClick(view, pos, event) {
+        const { active } = plugin.getState(view.state);
+        const { selection, doc } = view.state;
+        const { nodeType } = opts;
+        console.debug('nodemark: props->handleClick', `active: ${active}`);
+        console.debug('nodemark: props->handleClick', `selection: from ${selection.from} to ${selection.to}`);
+        console.debug('nodemark: props->handleClick', `args: pos ${pos}`);
+                
+        const currentInNode = nodeIsInSet(doc, selection.from, nodeType);
+        const left1stInNode = nodeIsInSet(doc, selection.from-1, nodeType);
+        const right1stInNode = nodeIsInSet(doc, selection.from+1, nodeType);
+
+        if (
+          // outside |<node>inside</node> outside
+          (!currentInNode && right1stInNode) ||
+          // outside <node>|inside</node> outside
+          (!left1stInNode && currentInNode) ||
+          // outside <node>inside|</node> outside
+          (currentInNode && !right1stInNode) || 
+          // outside <node>inside</node>| outside
+          (left1stInNode && !currentInNode)
+        ) {
+          const tr = view.state.tr.setSelection(new TextSelection(safeResolve(doc, pos))).setMeta(plugin, { active: true });
+          view.dispatch(tr);
+          return true;
+        }
+
+        return false;
+      },
       handleTextInput(view, from, to, text) {
         const { active } = plugin.getState(view.state);
         if (!active) return false;
@@ -100,6 +129,7 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
         // return { active: false };
 
         const meta = tr.getMeta(plugin);
+        console.debug('nodemark: state->apply', `meta: ${JSON.stringify(meta)}`);
         if (!!meta?.active) return { active: true };
         else return createDefaultState();
       }
