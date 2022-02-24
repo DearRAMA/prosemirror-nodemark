@@ -1,6 +1,6 @@
 {
   "name": "@dear-rama/prosemirror-nodemark",
-  "version": "0.3.5",
+  "version": "0.1.0",
   "description": "Inline node cursor helper for ProseMirror",
   "author": "Nakwon CHOI <ch0494@gmail.com>",
   "license": "MIT",
