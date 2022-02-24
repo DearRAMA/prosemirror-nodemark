@@ -1,8 +1,8 @@
 {
-  "name": "prosemirror-nodemark",
+  "name": "@dear-rama/prosemirror-nodemark",
   "version": "0.3.5",
-  "description": "Inline code mark for ProseMirror",
-  "author": "Rowan Cockett <rowan@curvenote.com>",
+  "description": "Inline node cursor helper for ProseMirror",
+  "author": "Nakwon CHOI <ch0494@gmail.com>",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
