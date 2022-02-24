@@ -8,13 +8,15 @@ export const KEY = 'Nodemark';
 export const PLUGIN_KEY = new PluginKey(KEY);
 
 export interface NodemarkOption {
-  node: NodeType;
+  nodeType: NodeType;
 }
 
 export interface NodemarkState {
   active: boolean;
-  side: number;
-  inout: number; // in: 1, out: -1
+}
+
+function createDefaultState(): NodemarkState {
+  return { active: false };
 }
 
 function toDom(): Node {
@@ -44,55 +46,62 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
       handleKeyDown(view, event) {
         switch(event.key) {
           case 'ArrowRight':
-            return onArrowRight(view, plugin, event, opts.node);
+            return onArrowRight(view, plugin, event, opts.nodeType);
           case 'ArrowLeft':
-            return onArrowLeft(view, plugin, event, opts.node);
+            return onArrowLeft(view, plugin, event, opts.nodeType);
           default:
             return false;
         }
       },
       handleTextInput(view, from, to, text) {
-        const { selection } = view.state;
-        const inNode = nodeIsInSet(view.state.doc, selection.from, opts.node);
-        const nextNode = nodeIsInSet(view.state.doc, selection.from+1, opts.node);
-        const prevNode = nodeIsInSet(view.state.doc, selection.from-1, opts.node);
-        const { active, side } = plugin.getState(view.state);
+        const { active } = plugin.getState(view.state);
         if (!active) return false;
-        console.log(`position: ${selection.from}`)
-        console.log(`from ${from} to ${to}: ${text}`);
-        if (side === 1) {
-          const tr = view.state.tr.insertText(text, selection.from);
-          view.dispatch(tr);
-          const tr2 = view.composing ?
-            view.state.tr.setSelection(new TextSelection(safeResolve(view.state.doc, selection.from), safeResolve(view.state.doc, selection.from+1))) :
-            view.state.tr.setSelection(new TextSelection(safeResolve(view.state.doc, selection.from+1), safeResolve(view.state.doc, selection.from+1)));
-          view.dispatch(tr2);
-          
-          return true;
-          // const tr2 = view.state.tr.setSelection(new TextSelection(safeResolve(view.state.doc, selection.from), safeResolve(view.state.doc, selection.from))).insertText(text, selection.from);
-          // view.dispatch(tr2);
-          // return true;
-        }
-        if (side === -1) {
-          const tr = view.state.tr.insertText(text, selection.from);
-          view.dispatch(tr);
-          const tr2 = view.composing ? 
-            view.state.tr.setSelection(new TextSelection(safeResolve(view.state.doc, selection.from), safeResolve(view.state.doc, selection.from+1))) :
-            view.state.tr.setSelection(new TextSelection(safeResolve(view.state.doc, selection.from+1), safeResolve(view.state.doc, selection.from+1)));
-          view.dispatch(tr2);
-          view.composing && view.dom.dispatchEvent(new CompositionEvent('compositionstart'));
-          return true;
-        }
 
-        return false;
+        const { selection } = view.state;
+        console.debug('nodemark: props->handleTextInput', `position: from ${selection.from} to ${selection.to}`);
+        console.debug('nodemark: props->handleTextInput', `args: from ${from} to ${to}: ${text}`);
+
+        const tr = view.state.tr.insertText(text, selection.from);
+        view.dispatch(tr);
+        const tr2 = view.composing ?
+          view.state.tr.setSelection(new TextSelection(safeResolve(view.state.doc, selection.from), safeResolve(view.state.doc, selection.from+1))) :
+          view.state.tr.setSelection(new TextSelection(safeResolve(view.state.doc, selection.from+1), safeResolve(view.state.doc, selection.from+1)));
+        view.dispatch(tr2);
+
+        return true;
       }
     },
     state: {
-      init: () => ({ active: false, side: 0, inout: 0 }),
+      init: createDefaultState,
       apply(tr, value, oldState, newState) {
+        // const { selection, doc } = newState;
+        // const { nodeType } = opts;
+        // console.log('nodemark: state->apply', `new state selection: from ${selection.from}, to ${selection.to}`);
+        
+        // if (!selection.empty) return createDefaultState();
+        
+        // const currentInNode = nodeIsInSet(doc, selection.from, nodeType);
+        // const left1stInNode = nodeIsInSet(doc, selection.from-1, nodeType);
+        // const right1stInNode = nodeIsInSet(doc, selection.from+1, nodeType);
+
+        // // outside |<node>inside</node> outside
+        // if (!currentInNode && right1stInNode) return { active: true };
+
+        // // outside <node>|inside</node> outside
+        // if (!left1stInNode && currentInNode) return { active: true };
+
+        // // outside <node>inside|</node> outside
+        // if (currentInNode && !right1stInNode) return { active: true };
+
+        // // outside <node>inside</node>| outside
+        // if (left1stInNode && !currentInNode) return { active: true };
+        
+        // // else
+        // return { active: false };
+
         const meta = tr.getMeta(plugin);
-        if (meta) return meta;
-        else return { active: false, side: 0, inout: 0 };
+        if (!!meta?.active) return { active: true };
+        else return createDefaultState();
       }
     },
     appendTransaction: (transactions, oldState, newState) => {

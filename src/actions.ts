@@ -5,41 +5,68 @@ import { nodeIsInSet, safeResolve } from "./utils";
 import { NodeType } from "prosemirror-model";
 
 export function onArrowRight(view: EditorView, plugin: Plugin<NodemarkState>, event: KeyboardEvent, nodeType: NodeType) {
-  const { selection, doc } = view.state;
+  if (event.shiftKey || event.altKey || event.ctrlKey) return false;
+  if (view.composing) return false;
 
-  const pos = selection.$from;
-  const inNode = !!nodeIsInSet(doc, selection.from, nodeType);
-  const nextNode = !!nodeIsInSet(doc, selection.from+1, nodeType);
-  console.debug(`inNode: ${inNode}, nextNode: ${nextNode}`);
+  const { selection, doc } = view.state;
+  const currentInNode = nodeIsInSet(doc, selection.from, nodeType);
+  const right1stInNode = nodeIsInSet(doc, selection.from+1, nodeType);
+  const right2ndInNode = nodeIsInSet(doc, selection.from+2, nodeType);
+  console.debug('nodemark: onArrowRight', `position: from ${selection.from} to ${selection.to}`);
+  console.debug('nodemark: onArrowRight', `currentInNode: ${currentInNode}, right1stInNode: ${right1stInNode}, right2ndInNode: ${right2ndInNode}`);
   
-  // <node>inside|</node> outside -> <node>inside</node>| outside
-  if (inNode && !nextNode) {
-    const tr = view.state.tr.setSelection(new TextSelection(safeResolve(view.state.doc, selection.from+1))).setMeta(plugin, { active: true, side: +1, inout: -1 });
+  
+  if (
+    // outside| <node>inside</node> outside  ->  outside |<node>inside</node> outside
+    (!currentInNode && !right1stInNode && right2ndInNode) ||
+    
+    // outside |<node>inside</node> outside  ->  outside <node>|inside</node> outside
+    (!currentInNode && right1stInNode) ||
+    
+    // outside <node>insid|e</node> outside  ->  outside <node>inside|</node> outside
+    (currentInNode && right1stInNode && !right2ndInNode) ||
+    
+    // outside <node>inside|</node> outside  ->  outside <node>inside</node>| outside
+    (currentInNode && !right1stInNode)
+  ) {
+    const tr = view.state.tr.setSelection(new TextSelection(safeResolve(doc, selection.from+1))).setMeta(plugin, { active: true });
     view.dispatch(tr);
     return true;
   }
+
+  // else
   return false;
 }
 
 export function onArrowLeft(view: EditorView, plugin: Plugin<NodemarkState>, event: KeyboardEvent, nodeType: NodeType) {
+  if (event.shiftKey || event.altKey || event.ctrlKey) return false;
+  if (view.composing) return false;
+
   const { selection, doc } = view.state;
+  const currentInNode = nodeIsInSet(doc, selection.from, nodeType);
+  const left1stInNode = nodeIsInSet(doc, selection.from-1, nodeType);
+  const left2ndInNode = nodeIsInSet(doc, selection.from-2, nodeType);
+  console.debug('nodemark: onArrowLeft', `position: from ${selection.from} to ${selection.to}`);
+  console.debug('nodemark: onArrowLeft', `currentInNode: ${currentInNode}, left1stInNode: ${left1stInNode}, left2ndInNode: ${left2ndInNode}`);
 
-  const inNode = !!nodeIsInSet(doc, selection.from, nodeType);
-  const prevNode = !!nodeIsInSet(doc, selection.from-1, nodeType);
-  const pprevNode = !!nodeIsInSet(doc, selection.from-2, nodeType);
-  console.debug('onArrowLeft', `position: ${selection.from}`);
-  console.debug('onArrowLeft', `prevNode: ${prevNode}, pprevNode: ${pprevNode}`);
+  if (
+    // outside <node>inside</node> |outside  ->  outside <node>inside</node>| outside
+    (!currentInNode && !left1stInNode && left2ndInNode) ||
 
-  if (prevNode && !pprevNode) {
-    const tr = view.state.tr.setSelection(new TextSelection(safeResolve(view.state.doc, selection.from-1))).setMeta(plugin, { active: true, side: -1, inout: +1 });
+    // outside <node>inside</node>| outside  ->  outside <node>inside|</node> outside
+    (!currentInNode && left1stInNode) ||
+
+    // outside <node>i|nside</node> outside  ->  outside <node>|inside</node> outside
+    (currentInNode && left1stInNode && !left2ndInNode) ||
+
+    // outside <node>|inside</node> outside  ->  outside |<node>inside</node> outside
+    (currentInNode && !left1stInNode)
+  ) {
+    const tr = view.state.tr.setSelection(new TextSelection(safeResolve(doc, selection.from-1))).setMeta(plugin, { active: true });
     view.dispatch(tr);
     return true;
   }
-  if (inNode && !prevNode) {
-    const tr = view.state.tr.setSelection(new TextSelection(safeResolve(view.state.doc, selection.from-1))).setMeta(plugin, { active: true, side: -1, inout: -1 });
-    view.dispatch(tr);
-    return true;
-  }
-
+  
+  // else
   return false;
 }

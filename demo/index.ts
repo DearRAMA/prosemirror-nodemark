@@ -59,7 +59,7 @@ function posFormat(pos: number, strong = false) {
   state: EditorState.create({
     doc: DOMParser.fromSchema(schema).parse(content),
     plugins: [
-      getNodemarkPlugin({node: schema.nodes['flavor']}),
+      getNodemarkPlugin({nodeType: schema.nodes['flavor']}),
       ...codemark(),
       inputRules({
         rules: [
