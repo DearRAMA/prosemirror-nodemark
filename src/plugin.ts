@@ -90,6 +90,7 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
       },
       handleTextInput(view, from, to, text) {
         const { active } = plugin.getState(view.state);
+        console.debug('nodemark: props->handleTextInput', `view.composing ${view.composing}`)
         if (!active) return false;
 
         const { selection } = view.state;

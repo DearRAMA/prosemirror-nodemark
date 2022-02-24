@@ -23,7 +23,7 @@
   "homepage": "github.com/DearRAMA/prosemirror-nodemark",
   "scripts": {
     "clean": "shx rm -rf dist",
-    "build": "yarn run clean && tsc -p .;mv dist/src/* dist; rm -r dist/src; rm -r dist/demo; cp src/codemark.css dist/codemark.css;",
+    "build": "yarn run clean && tsc -p . && shx mv dist/src/* dist && shx rm -r dist/src && shx rm -r dist/demo && shx cp src/nodemark.css dist/nodemark.css",
     "build:demo": "yarn run clean && webpack --config webpack.config.js && shx rm -r dist/src && shx rm -r dist/demo",
     "build:watch": "tsc -w -p .",
     "prepublishOnly": "yarn build",
