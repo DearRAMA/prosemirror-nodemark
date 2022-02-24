@@ -1,20 +1,9 @@
-import { onArrowLeft, onArrowRight, nextTrAndPass } from "./actions";
-import { Plugin, PluginKey, TextSelection } from "prosemirror-state";
+import { Plugin, TextSelection } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
-import { NodeType } from "prosemirror-model";
-import { nodeIsInSet, safeResolve } from "./utils";
+import { onArrowLeft, onArrowRight, nextTrAndPass } from "./actions";
+import { nodeIsInSet, PLUGIN_KEY, safeResolve } from "./utils";
+import { NodemarkState, NodemarkOption } from "./types";
 
-export const KEY = 'Nodemark';
-export const PLUGIN_KEY = new PluginKey(KEY);
-
-export interface NodemarkOption {
-  nodeType: NodeType;
-}
-
-export interface NodemarkState {
-  active: boolean;
-  next?: boolean;
-}
 
 function createDefaultState(): NodemarkState {
   return { active: false };
@@ -110,31 +99,6 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
     state: {
       init: createDefaultState,
       apply(tr, value, oldState, newState) {
-        // const { selection, doc } = newState;
-        // const { nodeType } = opts;
-        // console.log('nodemark: state->apply', `new state selection: from ${selection.from}, to ${selection.to}`);
-        
-        // if (!selection.empty) return createDefaultState();
-        
-        // const currentInNode = nodeIsInSet(doc, selection.from, nodeType);
-        // const left1stInNode = nodeIsInSet(doc, selection.from-1, nodeType);
-        // const right1stInNode = nodeIsInSet(doc, selection.from+1, nodeType);
-
-        // // outside |<node>inside</node> outside
-        // if (!currentInNode && right1stInNode) return { active: true };
-
-        // // outside <node>|inside</node> outside
-        // if (!left1stInNode && currentInNode) return { active: true };
-
-        // // outside <node>inside|</node> outside
-        // if (currentInNode && !right1stInNode) return { active: true };
-
-        // // outside <node>inside</node>| outside
-        // if (left1stInNode && !currentInNode) return { active: true };
-        
-        // // else
-        // return { active: false };
-
         console.debug('nodemark: state->apply: tr', tr);
         const meta = tr.getMeta(plugin);
         const state = plugin.getState(oldState);
