@@ -1,4 +1,4 @@
-import { onArrowLeft, onArrowRight } from "./actions";
+import { onArrowLeft, onArrowRight, nextTrAndPass } from "./actions";
 import { Plugin, PluginKey, TextSelection } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import { NodeType } from "prosemirror-model";
@@ -13,6 +13,7 @@ export interface NodemarkOption {
 
 export interface NodemarkState {
   active: boolean;
+  next?: boolean;
 }
 
 function createDefaultState(): NodemarkState {
@@ -49,6 +50,11 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
             return onArrowRight(view, plugin, event, opts.nodeType);
           case 'ArrowLeft':
             return onArrowLeft(view, plugin, event, opts.nodeType);
+          case 'Home':
+          case 'End':
+          case 'Backspace':
+          case 'Delete':
+            return nextTrAndPass(view, plugin, event, opts.nodeType);
           default:
             return false;
         }
@@ -128,14 +134,49 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
         // // else
         // return { active: false };
 
+        console.debug('nodemark: state->apply: tr', tr);
         const meta = tr.getMeta(plugin);
+        const state = plugin.getState(oldState);
         console.debug('nodemark: state->apply', `meta: ${JSON.stringify(meta)}`);
         if (!!meta?.active) return { active: true };
+        if (!!meta?.next || !!state.next) return { active: false, next: true };
         else return createDefaultState();
       }
     },
     appendTransaction: (transactions, oldState, newState) => {
-      return null;
+      const { next } = plugin.getState(oldState);
+      const meta = transactions[0]?.getMeta(plugin);
+      console.debug('nodemark: appendTransaction', `plugin.getState(oldState) next: ${next}`);
+      console.debug('nodemark: appendTransaction', `transactions[0]?.getMeta(plugin) next: ${meta?.next}`);
+      console.debug('nodemark: appendTransaction transaction', transactions);
+      if (!next) return null;
+      
+      const { selection, doc } = newState;
+      const { nodeType } = opts;
+      const currentInNode = nodeIsInSet(doc, selection.from, nodeType);
+      const left1stInNode = nodeIsInSet(doc, selection.from-1, nodeType);
+      const right1stInNode = nodeIsInSet(doc, selection.from+1, nodeType);
+      console.debug('nodemark: appendTransaction', `position: from ${selection.from} to ${selection.to}`);
+      console.debug('nodemark: appendTransaction', `currentInNode: ${currentInNode}, left1stInNode: ${left1stInNode}, right1stInNode: ${right1stInNode}`);
+
+      if (!currentInNode) {
+        if (!(left1stInNode !== right1stInNode)) return null;
+
+        /*                                  
+        ** outside <node>inside</node>  ->  outside <node>inside</node>|
+        ** |                            ->    
+        */
+        /*                                  
+        ** outside|                     ->  outside|<node>inside</node>
+        ** <node>inside</node>          ->    
+        */
+        return newState.tr.setMeta(plugin, { active: true });
+      }
+
+      // Home key -> ^<node>|inside</node> outside -> ^|<node>inside</node> outside
+      // End  key -> outside <node>inside|</node>$ -> outside <node>inside</node>|$
+      const offset = !left1stInNode ? -1 : +1; // !right1stInNode;
+      return newState.tr.setSelection(new TextSelection(safeResolve(doc, selection.from+offset))).setMeta(plugin, { active: true });
     }
   });
   return plugin;
