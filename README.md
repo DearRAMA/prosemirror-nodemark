@@ -1,15 +1,20 @@
 # `prosemirror-nodemark`
 
+**This repo is cloned concept, template and code snippet from [prosemirror-codemark](https://github.com/curvenote/prosemirror-codemark)**
+
+# Below README is just copied from prosemirror-codemark and should be updated.
+
+
 [![prosemirror-nodemark on npm](https://img.shields.io/npm/v/prosemirror-nodemark.svg)](https://www.npmjs.com/package/prosemirror-nodemark)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](github.com/DearRAMA/prosemirror-nodemark/blob/master/LICENSE)
 ![CI](github.com/DearRAMA/prosemirror-nodemark/workflows/CI/badge.svg)
-[![demo](https://img.shields.io/badge/live-demo-blue)](https://curvenote.github.io/prosemirror-nodemark/)
+[![demo](https://img.shields.io/badge/live-demo-blue)](https://dearrama.github.io/prosemirror-nodemark/)
 
 A plugin for [ProseMirror](https://prosemirror.net/) that handles manipulating and navigating inline code marks.
 The plugin creates a fake cursor as necessary to show you if the next character you type will or will not be marked.
 `prosemirror-nodemark` is created and used by [Curvenote](https://curvenote.com).
 
-[![Codemark](./demo/codemark.gif)](https://curvenote.github.io/prosemirror-nodemark/)
+[![Codemark](./demo/codemark.gif)](https://dearrama.github.io/prosemirror-nodemark/)
 
 ## Install
 
@@ -17,7 +22,7 @@ The plugin creates a fake cursor as necessary to show you if the next character 
 npm install prosemirror-nodemark
 ```
 
-Or see the [live demo here](https://curvenote.github.io/prosemirror-nodemark/)!
+Or see the [live demo here](https://dearrama.github.io/prosemirror-nodemark/)!
 
 **Highlights:**
 
