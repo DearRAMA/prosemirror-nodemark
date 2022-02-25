@@ -1,7 +1,7 @@
 import { Plugin, TextSelection } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import { onArrowLeft, onArrowRight } from "./actions";
-import { nodeIsInSet, PLUGIN_KEY, safeResolve } from "./utils";
+import { nodeIsInSet, PLUGIN_KEY, returnDeactive, safeResolve } from "./utils";
 import { NodemarkState, NodemarkOption } from "./types";
 
 
@@ -39,6 +39,9 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
             return onArrowRight(view, plugin, event, opts.nodeType);
           case 'ArrowLeft':
             return onArrowLeft(view, plugin, event, opts.nodeType);
+          case 'ArrowUp':
+          case 'ArrowDown':
+            return returnDeactive(view, plugin);
           default:
             return false;
         }
@@ -70,12 +73,14 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
           return true;
         }
 
-        return false;
+        // else
+        return returnDeactive(view, plugin);
       },
       handleTextInput(view, from, to, text) {
         const { active } = plugin.getState(view.state);
-        console.debug('nodemark: props->handleTextInput', `view.composing ${view.composing}`)
-        if (!active) return false;
+        if (!active) {
+          return false;
+        }
 
         const { selection } = view.state;
         console.debug('nodemark: props->handleTextInput', `position: from ${selection.from} to ${selection.to}`);
@@ -86,7 +91,7 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
         const tr2 = view.composing ?
           view.state.tr.setSelection(new TextSelection(safeResolve(view.state.doc, selection.from), safeResolve(view.state.doc, selection.from+1))) :
           view.state.tr.setSelection(new TextSelection(safeResolve(view.state.doc, selection.from+1), safeResolve(view.state.doc, selection.from+1)));
-        view.dispatch(tr2);
+        view.dispatch(tr2.setMeta(plugin, { active: false }));
 
         return true;
       }
@@ -96,12 +101,15 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
       apply(tr, value, oldState, newState) {
         console.debug('nodemark: state->apply: tr', tr);
         const meta = tr.getMeta(plugin);
+        const oldPluginState = plugin.getState(oldState);
         console.debug('nodemark: state->apply', `meta: ${JSON.stringify(meta)}`);
-        if (!!meta?.active) return { active: true };
-        else return createDefaultState();
+        console.debug('nodemark: state->apply', `oldPluginState: ${JSON.stringify(oldPluginState)}`);
+        
+        return {...oldPluginState, ...meta};
       }
     },
     appendTransaction: (transactions, oldState, newState) => {
+      console.debug('nodemark: appendTransaction', transactions);
       return null;
     }
   });
