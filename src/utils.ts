@@ -1,5 +1,5 @@
 import { Node, NodeType } from "prosemirror-model";
-import { Plugin, PluginKey, Selection } from "prosemirror-state";
+import { EditorState, Plugin, PluginKey, Selection } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 
 
@@ -38,7 +38,34 @@ export function nodeIsInSets(doc: Node, refPos: number, offsets: number[], nodeT
   return findFroms(doc, refPos, offsets).map((pos) => nodeIsInSet(doc, pos, nodeType));
 }
 
-export function returnDeactive(view: EditorView, plugin: Plugin) {
-  view.dispatch(view.state.tr.setMeta(plugin, { active: false }));
+export function returnTypingFalse(view: EditorView, plugin: Plugin) {
+  view.state.tr.setMeta(plugin, { typing: false });
   return false;
+}
+
+export function isActive(state: EditorState, nodeType: NodeType) {
+  
+  const { selection, doc } = state;
+  console.debug('nodemark isActive', `selection from ${selection.from} to ${selection.to}`);
+  if (selection.from !== selection.to) return false;
+
+  const [currentPos, left1stPos, right1Pos] = findFroms(doc, selection.from, [0, -1, +1]);
+  const [currentInNode, left1stInNode, right1stInNode] = nodeIsInSets(doc, selection.from, [0, -1, +1], nodeType);
+  console.debug('nodemark isActive', `currentPos ${currentPos}, left1stPos ${left1stPos}, right1Pos ${right1Pos}`);
+  console.debug('nodemark isActive', `currentInNode ${currentInNode}, left1stInNode ${left1stInNode}, right1stInNode ${right1stInNode}`);
+
+  if (
+    // outside |<node>inside</node> outside
+    (!currentInNode && right1stInNode) ||
+    // outside <node>|inside</node> outside
+    (!left1stInNode && currentInNode) ||
+    // outside <node>inside|</node> outside
+    (currentInNode && !right1stInNode) || 
+    // outside <node>inside</node>| outside
+    (left1stInNode && !currentInNode)
+  ) {
+    return true;
+  } else {
+    return false;
+  }
 }

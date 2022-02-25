@@ -6,6 +6,6 @@ export interface NodemarkOption {
 }
 
 export interface NodemarkState {
-  active: boolean;
+  typing: boolean;
   next?: boolean;
 }
