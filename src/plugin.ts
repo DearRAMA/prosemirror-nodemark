@@ -1,12 +1,15 @@
 import { Plugin, TextSelection } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
-import { onArrowLeft, onArrowRight, onBackspace } from "./actions";
-import { isActive, nodeIsInSet, PLUGIN_KEY, returnTypingFalse, safeResolve } from "./utils";
+import { onArrowLeft, onArrowRight, onBackspace, onHomeEnd } from "./actions";
+import { findFroms, isActive, nodeIsInSet, PLUGIN_KEY, returnTypingFalse, safeResolve } from "./utils";
 import { NodemarkState, NodemarkOption } from "./types";
 
 
 function createDefaultState(): NodemarkState {
-  return { typing: false };
+  return { 
+    typing: false,
+    pending: null,
+  };
 }
 
 function toDom(): Node {
@@ -46,6 +49,10 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
             return onBackspace(view, plugin, event, opts.nodeType);
           case 'Delete':
             return returnTypingFalse(view, plugin);
+          case 'Home':
+            return onHomeEnd(view, plugin, event, opts.nodeType, 'Home');
+          case 'End':
+            return onHomeEnd(view, plugin, event, opts.nodeType, 'End');
           default:
             return false;
         }
@@ -97,15 +104,48 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
       init: createDefaultState,
       apply(tr, value, oldState, newState) {
         console.debug('nodemark: state->apply: tr', tr);
-        const meta = tr.getMeta(plugin) ?? {};
+        const meta = tr.getMeta(plugin);
         const oldPluginState = plugin.getState(oldState);
-        console.debug('nodemark: state->apply', `meta: ${JSON.stringify(meta)}`);
+        console.debug('nodemark: state->apply', `meta: ${meta ? JSON.stringify(meta) : 'undefiend'}`);
         console.debug('nodemark: state->apply', `oldPluginState: ${JSON.stringify(oldPluginState)}`);
-        return {...oldPluginState, ...meta};
+        return {...oldPluginState, ...(meta ? { pending: null, ...meta } : {})};
       }
     },
     appendTransaction: (transactions, oldState, newState) => {
-      console.debug('nodemark: appendTransaction', transactions);
+      console.debug('nodemark: appendTransaction transaction', transactions);
+      console.debug('nodemark: appendTransaction oldState', oldState);
+      console.debug('nodemark: appendTransaction newState', newState);
+
+      const oldPluginState = plugin.getState(oldState);
+      const { selection: oldSelection } = oldState;
+      const { selection: newSelection } = newState;
+      const { pending = null } = oldPluginState;
+      if (
+        (pending === 'Home' || pending === 'End') &&
+        !oldSelection.eq(newSelection)
+      ) {
+        const tr = newState.tr;
+
+        const currentPos = pending === 'Home' ? newSelection.from : newSelection.to;
+        const [left1stPos, right1stPos] = findFroms(newState.doc, currentPos, [-1, +1]);
+        const currentInNode = nodeIsInSet(newState.doc, currentPos, opts.nodeType);
+        if (currentInNode) {
+          if (newSelection.empty) {
+            tr.setSelection(new TextSelection(
+              pending === 'Home'? safeResolve(newState.doc, left1stPos) : safeResolve(newState.doc, right1stPos),
+              pending === 'Home'? safeResolve(newState.doc, left1stPos) : safeResolve(newState.doc, right1stPos)
+            ));
+          }
+          else {
+            tr.setSelection(new TextSelection(
+              pending === 'Home'? safeResolve(newState.doc, left1stPos) : newSelection.$from,
+              pending === 'Home'? newSelection.$to : safeResolve(newState.doc, right1stPos)
+            ));
+          }
+          
+        }
+        return tr.setMeta(plugin, { pending: null });
+      }
       return null;
     }
   });

@@ -107,3 +107,8 @@ export function onBackspace(view: EditorView, plugin: Plugin<NodemarkState>, eve
   
   return returnTypingFalse(view, plugin);
 }
+
+export function onHomeEnd(view: EditorView, plugin: Plugin<NodemarkState>, event: KeyboardEvent, nodeType: NodeType, homeEnd: 'Home' | 'End') {
+  const tr = view.state.tr.setMeta(plugin, { pending: homeEnd });
+  view.dispatch(tr);
+}

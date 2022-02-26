@@ -7,5 +7,6 @@ export interface NodemarkOption {
 
 export interface NodemarkState {
   typing: boolean;
-  next?: boolean;
+  pending: 'Home' | 'End' | null;
+
 }
