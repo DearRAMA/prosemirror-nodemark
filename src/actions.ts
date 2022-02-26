@@ -1,7 +1,7 @@
 import { NodemarkState } from "./index";
 import { Plugin, Selection, TextSelection } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
-import { findFroms, nodeIsInSet, nodeIsInSets, returnTypingFalse, safeResolve } from "./utils";
+import { findFroms, isActive, nodeIsInSet, nodeIsInSets, returnTypingFalse, safeResolve } from "./utils";
 import { NodeType } from "prosemirror-model";
 
 export function onArrowRight(view: EditorView, plugin: Plugin<NodemarkState>, event: KeyboardEvent, nodeType: NodeType) {
@@ -106,4 +106,57 @@ export function onBackspace(view: EditorView, plugin: Plugin<NodemarkState>, eve
   }
   
   return returnTypingFalse(view, plugin);
+}
+
+export function onHome(view: EditorView, plugin: Plugin<NodemarkState>, event: KeyboardEvent, nodeType: NodeType) {
+  if (event.metaKey || event.shiftKey || event.altKey || event.ctrlKey) return returnTypingFalse(view, plugin);
+
+  const { selection, doc } = view.state;
+  const coords = view.coordsAtPos(selection.from);
+  console.debug('nodemark onHome', `coords ${JSON.stringify(coords)}`);
+  const rect = view.dom.getBoundingClientRect();
+  console.debug('nodemark onHome', `rect ${JSON.stringify(rect)}`);
+  const predictHome = view.posAtCoords({ left: rect.left+1, top: coords.top });
+  console.debug('nodemark onHome', `predictHome ${JSON.stringify(predictHome)}`);
+
+  if (!predictHome) return returnTypingFalse(view, plugin);
+
+  const [currentPos, right1stPos] = findFroms(doc, predictHome.pos, [0, +1]);
+  // ...<node>inside</node> outside</p>  :  <p> outside dfsevasdfasevcas
+  // |<p><node>inside</node> outside...  :  |<node>inside</node> outside</p>
+  const pos = predictHome.inside === -1 ? right1stPos : predictHome.pos;
+  
+  if (!isActive(view.state, nodeType, pos)) return returnTypingFalse(view, plugin);
+
+  const tr = view.state.tr.setSelection(new TextSelection(safeResolve(doc, pos)));
+  tr.setMeta(plugin, { typing: false });
+  view.dispatch(tr);
+  return true;
+}
+
+export function onEnd(view: EditorView, plugin: Plugin<NodemarkState>, event: KeyboardEvent, nodeType: NodeType) {
+  if (event.metaKey || event.shiftKey || event.altKey || event.ctrlKey) return returnTypingFalse(view, plugin);
+
+  const { selection, doc } = view.state;
+  const coords = view.coordsAtPos(selection.from);
+  console.debug('nodemark onEnd', `coords ${JSON.stringify(coords)}`);
+  const rect = view.dom.getBoundingClientRect();
+  console.debug('nodemark onEnd', `rect ${JSON.stringify(rect)}`);
+  const predictHome = view.posAtCoords({ left: rect.width-1, top: coords.top });
+  console.debug('nodemark onEnd', `predictHome ${JSON.stringify(predictHome)}`);
+
+  if (!predictHome) return returnTypingFalse(view, plugin);
+  
+  const pos = predictHome.pos;
+  
+  if (!(
+    isActive(view.state, nodeType, pos) || 
+    // Trick |<node>inside</node> outside...  cannot go end
+    isActive(view.state, nodeType
+  ))) return returnTypingFalse(view, plugin);
+
+  const tr = view.state.tr.setSelection(new TextSelection(safeResolve(doc, pos)));
+  tr.setMeta(plugin, { typing: false });
+  view.dispatch(tr);
+  return true;
 }

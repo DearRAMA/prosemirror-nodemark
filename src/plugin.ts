@@ -1,6 +1,6 @@
 import { Plugin, TextSelection } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
-import { onArrowLeft, onArrowRight, onBackspace } from "./actions";
+import { onArrowLeft, onArrowRight, onBackspace, onEnd, onHome } from "./actions";
 import { findFroms, isActive, nodeIsInSet, nodeIsInSets, PLUGIN_KEY, returnTypingFalse, safeResolve } from "./utils";
 import { NodemarkState, NodemarkOption } from "./types";
 
@@ -46,6 +46,10 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
             return onBackspace(view, plugin, event, opts.nodeType);
           case 'Delete':
             return returnTypingFalse(view, plugin);
+          case 'Home':
+            return onHome(view, plugin, event, opts.nodeType);
+          case 'End':
+            return onEnd(view, plugin, event, opts.nodeType);
           default:
             return false;
         }
