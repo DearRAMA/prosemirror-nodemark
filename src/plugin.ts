@@ -1,7 +1,7 @@
 import { Plugin, TextSelection } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import { onArrowLeft, onArrowRight, onBackspace } from "./actions";
-import { isActive, nodeIsInSet, PLUGIN_KEY, returnTypingFalse, safeResolve } from "./utils";
+import { findFroms, isActive, nodeIsInSet, nodeIsInSets, PLUGIN_KEY, returnTypingFalse, safeResolve } from "./utils";
 import { NodemarkState, NodemarkOption } from "./types";
 
 
@@ -54,11 +54,20 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
         const { selection, doc } = view.state;
         console.debug('nodemark: props->handleClick', `selection: from ${selection.from} to ${selection.to}`);
         console.debug('nodemark: props->handleClick', `args: pos ${pos}`);
-                
-        const active = isActive(view.state, opts.nodeType);
+        
+        // click |<p><node>inside</node> outside -> pos == |<p><node>inside</node> outside, not <p>|<node>inside</node> outside
+        const active = isActive(view.state, opts.nodeType, pos);
 
         if (active) {
           const tr = view.state.tr.setSelection(new TextSelection(safeResolve(doc, pos))).setMeta(plugin, { typing: false });
+          view.dispatch(tr);
+          return true;
+        }
+
+        const [right1Pos] = findFroms(doc, pos, [+1]);
+        const [right2ndInNode] = nodeIsInSets(doc, pos, [+2], opts.nodeType);
+        if (right2ndInNode) {
+          const tr = view.state.tr.setSelection(new TextSelection(safeResolve(doc, right1Pos))).setMeta(plugin, { typing: false });
           view.dispatch(tr);
           return true;
         }
