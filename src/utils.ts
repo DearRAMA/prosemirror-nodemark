@@ -43,12 +43,15 @@ export function returnTypingFalse(view: EditorView, plugin: Plugin) {
   return false;
 }
 
-export function isActive(state: EditorState, nodeType: NodeType, from: number = state.selection.from, to: number = state.selection.to) {
+export function isActive(state: EditorState, nodeType: NodeType, pos: number | null = null) {
   
   const { selection, doc } = state;
 
+  const from = pos === null ? selection.from : pos;
+  const to = pos === null ? selection.to : pos;
+
   console.debug('nodemark isActive', `selection from ${from} to ${to}`);
-  if (from !== selection.to) return false;
+  if (from !== to) return false;
 
   const [currentPos, left1stPos, right1Pos] = findFroms(doc, from, [0, -1, +1]);
   const [currentInNode, left1stInNode, right1stInNode] = nodeIsInSets(doc, from, [0, -1, +1], nodeType);
