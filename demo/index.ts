@@ -14,6 +14,7 @@ import '../src/nodemark.css';
 import { createHTMLTransformer, createJSONTransformer, createNullTransformer } from "@aeaton/prosemirror-transformers";
 import codemark from 'prosemirror-codemark';
 import 'prosemirror-codemark/dist/codemark.css';
+import { isActive } from '../src/utils';
 
 const editor = document.querySelector('#editor') as HTMLDivElement;
 const content = document.querySelector('#content') as HTMLDivElement;
@@ -25,6 +26,7 @@ export const schema = new Schema({
 
 const htmlTransformer = createHTMLTransformer(schema);
 const htmlResult = document.querySelector('#html-result') as HTMLDivElement;
+const pluginState = document.querySelector('#plugin-state') as HTMLDivElement;
 
 function posView(html: string, selection: number) {
   let index = 0;
@@ -40,7 +42,7 @@ function posView(html: string, selection: number) {
       const nodeType = html.slice(index+1, end);
       result += `&lt;${nodeType}&gt;`;
       index = end+1;
-      if (nodeType === 'code') continue;
+      if (nodeType === 'code' || nodeType === '/code') continue;
     } else {
       result += html[index];
       index++;
@@ -51,15 +53,16 @@ function posView(html: string, selection: number) {
 }
 
 function posFormat(pos: number, strong = false) {
-  if (strong) return `<ruby>&#8203;<rt><b>${pos++}</b></rt></ruby>`
+  if (strong) return `<ruby>&#8203;<rt><b style="color: red;">${pos++}</b></rt></ruby>`
   else return `<ruby>&#8203;<rt>${pos++}</rt></ruby>`
 }
 
+const plugin = getNodemarkPlugin({nodeType: schema.nodes['flavor']});
 (window as any).view = new EditorView(editor, {
   state: EditorState.create({
     doc: DOMParser.fromSchema(schema).parse(content),
     plugins: [
-      getNodemarkPlugin({nodeType: schema.nodes['flavor']}),
+      plugin,
       ...codemark(),
       inputRules({
         rules: [
@@ -80,6 +83,7 @@ function posFormat(pos: number, strong = false) {
     const state = this.state.apply(tr);
     this.updateState(state);
     htmlResult.innerHTML = posView(htmlTransformer.serialize(state.doc), state.selection.from);
+    pluginState.innerText = `active ${isActive(state, state.schema.nodes.flavor)} state ${JSON.stringify(plugin.getState(state))}`;
   }
 });
 
