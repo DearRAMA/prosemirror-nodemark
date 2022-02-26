@@ -65,11 +65,15 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
       handleTextInput(view, from, to, text) {
         const active = isActive(view.state, opts.nodeType);
         console.debug('nodemark handleTextInput', `active ${active}`);
-        if (!active) {
-          return false;
-        }
         const { typing } = plugin.getState(view.state);
         console.debug('nodemark handleTextInput', `typing ${active}`);
+        if (!active) {
+          if (typing) {
+            const tr = view.state.tr.setMeta(plugin, { typing: false });
+            view.dispatch(tr);
+          }
+          return false;
+        }
         if (typing) {
           return false;
         }
