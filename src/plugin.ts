@@ -122,7 +122,8 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
       const { pending = null } = oldPluginState;
       if (
         (pending === 'Home' || pending === 'End') &&
-        !oldSelection.eq(newSelection)
+        !oldSelection.eq(newSelection) &&
+        (pending === 'Home' ? oldSelection.from >= newSelection.from : oldSelection.from <= newSelection.from)
       ) {
         const tr = newState.tr;
 
