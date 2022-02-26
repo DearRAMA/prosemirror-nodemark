@@ -1,7 +1,7 @@
 import { NodemarkState } from "./index";
 import { Plugin, Selection, TextSelection } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
-import { findFroms, nodeIsInSet, nodeIsInSets, returnTypingFalse, safeResolve } from "./utils";
+import { findFroms, isActive, nodeIsInSet, nodeIsInSets, returnTypingFalse, safeResolve } from "./utils";
 import { NodeType } from "prosemirror-model";
 
 export function onArrowRight(view: EditorView, plugin: Plugin<NodemarkState>, event: KeyboardEvent, nodeType: NodeType) {
@@ -111,4 +111,5 @@ export function onBackspace(view: EditorView, plugin: Plugin<NodemarkState>, eve
 export function onHomeEnd(view: EditorView, plugin: Plugin<NodemarkState>, event: KeyboardEvent, nodeType: NodeType, homeEnd: 'Home' | 'End') {
   const tr = view.state.tr.setMeta(plugin, { pending: homeEnd });
   view.dispatch(tr);
+  return false;
 }
