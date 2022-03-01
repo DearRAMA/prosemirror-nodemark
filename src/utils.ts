@@ -1,6 +1,7 @@
 import { Node, NodeType } from "prosemirror-model";
 import { EditorState, Plugin, PluginKey, Selection } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
+import { NodemarkState } from "./types";
 
 
 export const DEFAULT_KEY = 'nodemark';
@@ -38,8 +39,15 @@ export function nodeIsInSets(doc: Node, refPos: number, offsets: number[], nodeT
   return findFroms(doc, refPos, offsets).map((pos) => nodeIsInSet(doc, pos, nodeType));
 }
 
+export function createDefaultState(): NodemarkState {
+  return {
+    typing: false,
+    samePos: false,
+  };
+}
+
 export function returnTypingFalse(view: EditorView, plugin: Plugin) {
-  view.state.tr.setMeta(plugin, { typing: false });
+  view.state.tr.setMeta(plugin, createDefaultState());
   return false;
 }
 

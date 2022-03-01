@@ -1,13 +1,9 @@
 import { Plugin, TextSelection } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import { onArrowLeft, onArrowRight, onBackspace, onEnd, onHome } from "./actions";
-import { findFroms, isActive, nodeIsInSet, nodeIsInSets, PLUGIN_KEY, returnTypingFalse, safeResolve } from "./utils";
+import { createDefaultState, findFroms, isActive, nodeIsInSet, nodeIsInSets, PLUGIN_KEY, returnTypingFalse, safeResolve } from "./utils";
 import { NodemarkState, NodemarkOption } from "./types";
 
-
-function createDefaultState(): NodemarkState {
-  return { typing: false };
-}
 
 function toDom(): Node {
   const span = document.createElement('span');
@@ -59,18 +55,31 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
         console.debug('nodemark: props->handleClick', `selection: from ${selection.from} to ${selection.to}`);
         console.debug('nodemark: props->handleClick', `args: pos ${pos}`);
         
-        // click |<p><node>inside</node> outside -> pos == |<p><node>inside</node> outside, not <p>|<node>inside</node> outside
         const active = isActive(view.state, opts.nodeType, pos);
+        const [left1stInNode, currentInNode, right2ndInNode] = [-1, 0, +2].map(offset => nodeIsInSet(doc, pos+offset, opts.nodeType));
 
         if (active) {
-          const tr = view.state.tr.setSelection(new TextSelection(safeResolve(doc, pos))).setMeta(plugin, { typing: false });
+          // when click empty node
+          // outside <node>|</node> outside -> outside <node></node>| outside, not outside <node>|</node> outside
+          // click twice same position
+          if (
+            !currentInNode && left1stInNode && 
+            selection.from === pos && 
+            safeResolve(doc, pos-1).node().nodeSize === 2 && 
+            !plugin.getState(view.state).samePos
+          ) {
+            const tr = view.state.tr.setSelection(new TextSelection(safeResolve(doc, pos-1))).setMeta(plugin, { ...createDefaultState(), samePos: true });
+            view.dispatch(tr);
+            return true;
+          }
+          const tr = view.state.tr.setSelection(new TextSelection(safeResolve(doc, pos))).setMeta(plugin, createDefaultState());
           view.dispatch(tr);
           return true;
         }
 
-        const [currentInNode, right2ndInNode] = [0, +2].map(offset => nodeIsInSet(doc, pos+offset, opts.nodeType));
+        // click |<p><node>inside</node> outside -> pos == |<p><node>inside</node> outside, not <p>|<node>inside</node> outside
         if (!currentInNode && right2ndInNode) {
-          const tr = view.state.tr.setSelection(new TextSelection(safeResolve(doc, pos+1))).setMeta(plugin, { typing: false });
+          const tr = view.state.tr.setSelection(new TextSelection(safeResolve(doc, pos+1))).setMeta(plugin, createDefaultState());
           view.dispatch(tr);
           return true;
         }
@@ -94,7 +103,7 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
           const { selection } = view.state;
           const tr = view.state.tr.insertText('\u200b', selection.from, selection.to);
           tr.setSelection(new TextSelection(safeResolve(tr.doc, selection.from), safeResolve(tr.doc, selection.from+1)));
-          tr.setMeta(plugin, { typing: true });
+          tr.setMeta(plugin, { ...createDefaultState(), typing: true });
           view.dispatch(tr);
 
           return false;
