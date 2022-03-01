@@ -79,31 +79,27 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
         // else
         return returnTypingFalse(view, plugin);
       },
-      handleTextInput(view, from, to, text) {
-        const active = isActive(view.state, opts.nodeType);
-        console.debug('nodemark handleTextInput', `active ${active}`);
-        if (!active) {
+      handleDOMEvents: {
+        beforeinput(view, event) {
+          const active = isActive(view.state, opts.nodeType);
+          console.debug('nodemark handleTextInput', `active ${active}`);
+          if (!active) {
+            return false;
+          }
+          const { typing } = plugin.getState(view.state);
+          console.debug('nodemark handleTextInput', `typing ${active}`);
+          if (typing) {
+            return false;
+          }
+
+          const { selection } = view.state;
+          const tr = view.state.tr.insertText('\u200b', selection.from, selection.to);
+          tr.setSelection(new TextSelection(safeResolve(tr.doc, selection.from), safeResolve(tr.doc, selection.from+1)));
+          tr.setMeta(plugin, { typing: true });
+          view.dispatch(tr);
+
           return false;
         }
-        const { typing } = plugin.getState(view.state);
-        console.debug('nodemark handleTextInput', `typing ${active}`);
-        if (typing) {
-          return false;
-        }
-
-        const { selection } = view.state;
-        console.debug('nodemark: props->handleTextInput', `position: from ${selection.from} to ${selection.to}`);
-        console.debug('nodemark: props->handleTextInput', `args: from ${from} to ${to}: ${text}`);
-
-        const tr = view.state.tr.insertText(text, selection.from);
-        view.dispatch(tr);
-        const tr2 = view.composing ?
-          view.state.tr.setSelection(new TextSelection(safeResolve(view.state.doc, selection.from), safeResolve(view.state.doc, selection.from+1))) :
-          view.state.tr.setSelection(new TextSelection(safeResolve(view.state.doc, selection.from+1), safeResolve(view.state.doc, selection.from+1)));
-        tr2.setMeta(plugin, { typing: true });
-        view.dispatch(tr2);
-
-        return true;
       }
     },
     state: {
