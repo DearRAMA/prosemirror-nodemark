@@ -68,10 +68,9 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
           return true;
         }
 
-        const [right1Pos] = findFroms(doc, pos, [+1]);
-        const [currentInNode, right2ndInNode] = nodeIsInSets(doc, pos, [0, +2], opts.nodeType);
+        const [currentInNode, right2ndInNode] = [0, +2].map(offset => nodeIsInSet(doc, pos+offset, opts.nodeType));
         if (!currentInNode && right2ndInNode) {
-          const tr = view.state.tr.setSelection(new TextSelection(safeResolve(doc, right1Pos))).setMeta(plugin, { typing: false });
+          const tr = view.state.tr.setSelection(new TextSelection(safeResolve(doc, pos+1))).setMeta(plugin, { typing: false });
           view.dispatch(tr);
           return true;
         }
