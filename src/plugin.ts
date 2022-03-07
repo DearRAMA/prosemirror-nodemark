@@ -72,8 +72,19 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
             view.dispatch(tr);
             return true;
           }
-          const tr = view.state.tr.setSelection(new TextSelection(safeResolve(doc, pos))).setMeta(plugin, createDefaultState());
+          // RPRS-9 force to select ZeroWidthSpace to target position and remove at next macrotask event loop.
+          // same event stack and microtask cannot stop composition.
+          // outside <span>insid_|</span> outside -> outside <span>insid_</span>█ outside ->
+          // [next macrotask] -> outside <span>inside</span>█ outside - setTimeout -> outside <span>inside</span> outside
+          // just move cursor make compositionend event set cursor next to compositionend charactor
+          const tr = view.state.tr.insertText('\u200b', pos);
+          tr.setSelection(new TextSelection(safeResolve(tr.doc, pos), safeResolve(tr.doc, pos+1)));
+          tr.setMeta(plugin, createDefaultState());
           view.dispatch(tr);
+          setTimeout(() => {
+            const tr = view.state.tr.replace(pos, pos+1);
+            view.dispatch(tr);
+          }, 0);
           return true;
         }
 
