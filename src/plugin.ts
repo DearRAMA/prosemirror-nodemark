@@ -1,7 +1,7 @@
 import { Plugin, TextSelection } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import { onArrowLeft, onArrowRight, onBackspace, onEnd, onHome } from "./actions";
-import { createDefaultState, findFroms, isActive, nodeIsInSet, nodeIsInSets, PLUGIN_KEY, returnTypingFalse, safeResolve } from "./utils";
+import { checkActive, createDefaultState, findFroms, isActive, nodeIsInSet, nodeIsInSets, PLUGIN_KEY, returnTypingFalse, safeResolve } from "./utils";
 import { NodemarkState, NodemarkOption } from "./types";
 
 
@@ -89,23 +89,24 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
       },
       handleDOMEvents: {
         beforeinput(view, event) {
-          const active = isActive(view.state, opts.nodeType);
-          console.debug('nodemark handleTextInput', `active ${active}`);
-          if (!active) {
-            return false;
-          }
-          const { typing } = plugin.getState(view.state);
-          console.debug('nodemark handleTextInput', `typing ${active}`);
-          if (typing) {
-            return false;
-          }
-
+          const { isActive, activePos } = checkActive(view.state, opts.nodeType);
           const { selection } = view.state;
-          const tr = view.state.tr.insertText('\u200b', selection.from, selection.to);
-          tr.setSelection(new TextSelection(safeResolve(tr.doc, selection.from), safeResolve(tr.doc, selection.from+1)));
-          tr.setMeta(plugin, { ...createDefaultState(), typing: true });
-          view.dispatch(tr);
-
+          const { node: domAtPosLeft } = view.domAtPos(selection.from, -1);
+          const actualSelectionDom = document.getSelection()?.anchorNode;
+          
+          if (isActive &&
+            (
+              (activePos === -2 && domAtPosLeft !== actualSelectionDom) ||
+              (activePos === -1) ||
+              (activePos === +1 && domAtPosLeft !== actualSelectionDom) ||
+              (activePos === +2)
+            )
+          ) {
+            const tr = view.state.tr.insertText('\u200b', selection.from, selection.to);
+            tr.setSelection(new TextSelection(safeResolve(tr.doc, selection.from), safeResolve(tr.doc, selection.from+1)));
+            tr.setMeta(plugin, { ...createDefaultState(), typing: true });
+            view.dispatch(tr);
+          }
           return false;
         }
       }

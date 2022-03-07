@@ -41,7 +41,6 @@ export function nodeIsInSets(doc: Node, refPos: number, offsets: number[], nodeT
 
 export function createDefaultState(): NodemarkState {
   return {
-    typing: false,
     samePos: false,
   };
 }
@@ -51,33 +50,56 @@ export function returnTypingFalse(view: EditorView, plugin: Plugin) {
   return false;
 }
 
+/** @deprecated */
 export function isActive(state: EditorState, nodeType: NodeType, pos: number | null = null) {
-  
+  return checkActive(state, nodeType, pos).isActive;
+}
+
+export function checkActive(state: EditorState, nodeType: NodeType, pos: number | null = null): {
+  isActive: boolean,
+  /**
+   * -2: outside |&lt;node&gt;inside&lt;/node&gt; outside
+   * 
+   * -1: outside &lt;node&gt;|inside&lt;/node&gt; outside
+   * 
+   * +1: outside &lt;node&gt;inside|&lt;/node&gt; outside
+   * 
+   * +2: outside &lt;node&gt;inside&lt;/node&gt;| outside
+   * 
+   *  0: false
+   */
+  activePos: -2 | -1 | 0 | 1 | 2
+} {
+
   const { selection, doc } = state;
 
   const from = pos === null ? selection.from : pos;
   const to = pos === null ? selection.to : pos;
 
-  console.debug('nodemark isActive', `selection from ${from} to ${to}`);
-  if (from !== to) return false;
+  console.debug('nodemark', 'checkActive', `selection from ${from} to ${to}`);
+  if (from !== to) return { isActive: false, activePos: 0 };
 
   const [currentPos, left1stPos, right1Pos] = findFroms(doc, from, [0, -1, +1]);
   const [currentInNode, left1stInNode, right1stInNode] = nodeIsInSets(doc, from, [0, -1, +1], nodeType);
-  console.debug('nodemark isActive', `currentPos ${currentPos}, left1stPos ${left1stPos}, right1Pos ${right1Pos}`);
-  console.debug('nodemark isActive', `currentInNode ${currentInNode}, left1stInNode ${left1stInNode}, right1stInNode ${right1stInNode}`);
+  console.debug('nodemark', 'checkActive', `currentPos ${currentPos}, left1stPos ${left1stPos}, right1Pos ${right1Pos}`);
+  console.debug('nodemark', 'checkActive', `currentInNode ${currentInNode}, left1stInNode ${left1stInNode}, right1stInNode ${right1stInNode}`);
 
-  if (
-    // outside |<node>inside</node> outside
-    (!currentInNode && right1stInNode) ||
-    // outside <node>|inside</node> outside
-    (!left1stInNode && currentInNode) ||
-    // outside <node>inside|</node> outside
-    (currentInNode && !right1stInNode) || 
-    // outside <node>inside</node>| outside
-    (left1stInNode && !currentInNode)
-  ) {
-    return true;
-  } else {
-    return false;
+  // outside |<node>inside</node> outside
+  if (!currentInNode && right1stInNode) {
+    return { isActive: true, activePos: -2 };
   }
+  // outside <node>|inside</node> outside
+  if (!left1stInNode && currentInNode) {
+    return { isActive: true, activePos: -1 };
+  }
+  // outside <node>inside|</node> outside
+  if (currentInNode && !right1stInNode) {
+    return { isActive: true, activePos: 1 };
+  }
+  // outside <node>inside</node>| outside
+  if (left1stInNode && !currentInNode) {
+    return { isActive: true, activePos: 2 };
+  }
+
+  return { isActive: false, activePos: 0 };
 }
