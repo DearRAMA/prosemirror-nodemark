@@ -94,19 +94,19 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
           const { node: domAtPosLeft } = view.domAtPos(selection.from, -1);
           const actualSelectionDom = document.getSelection()?.anchorNode;
           
-          if (isActive &&
-            (
+          if (!isActive ||
+            !(
               (activePos === -2 && domAtPosLeft !== actualSelectionDom) ||
               (activePos === -1) ||
               (activePos === +1 && domAtPosLeft !== actualSelectionDom) ||
               (activePos === +2)
             )
-          ) {
-            const tr = view.state.tr.insertText('\u200b', selection.from, selection.to);
-            tr.setSelection(new TextSelection(safeResolve(tr.doc, selection.from), safeResolve(tr.doc, selection.from+1)));
-            tr.setMeta(plugin, { ...createDefaultState(), typing: true });
-            view.dispatch(tr);
-          }
+          ) return false;
+
+          const tr = view.state.tr.insertText('\u200b', selection.from, selection.to);
+          tr.setSelection(new TextSelection(safeResolve(tr.doc, selection.from), safeResolve(tr.doc, selection.from+1)));
+          tr.setMeta(plugin, { ...createDefaultState() });
+          view.dispatch(tr);
           return false;
         }
       }
