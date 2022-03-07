@@ -110,6 +110,7 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
             tr.setSelection(new TextSelection(safeResolve(tr.doc, selection.from+1)));
             tr.setMeta(plugin, { ...createDefaultState() });
             view.dispatch(tr);
+            event.preventDefault();
             return true;
           }
           const tr = view.state.tr.insertText('\u200b', selection.from, selection.to);
