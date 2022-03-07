@@ -78,7 +78,8 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
         }
 
         // click |<p><node>inside</node> outside -> pos == |<p><node>inside</node> outside, not <p>|<node>inside</node> outside
-        if (!currentInNode && right2ndInNode) {
+        // check except outside| <node>inside</node> outside -> outside |<node>inside</node> outside
+        if (!currentInNode && right2ndInNode && !(view.domAtPos(selection.from).node instanceof Text)) {
           const tr = view.state.tr.setSelection(new TextSelection(safeResolve(doc, pos+1))).setMeta(plugin, createDefaultState());
           view.dispatch(tr);
           return true;
