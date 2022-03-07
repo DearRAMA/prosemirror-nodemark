@@ -102,7 +102,15 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
               (activePos === +2)
             )
           ) return false;
-
+          
+          // RPRS-19 only space is not inserted correct position. so override browser behaviour
+          if (event.data === ' ') {
+            const tr = view.state.tr.insertText(' ', selection.from, selection.to);
+            tr.setSelection(new TextSelection(safeResolve(tr.doc, selection.from+1)));
+            tr.setMeta(plugin, { ...createDefaultState() });
+            view.dispatch(tr);
+            return true;
+          }
           const tr = view.state.tr.insertText('\u200b', selection.from, selection.to);
           tr.setSelection(new TextSelection(safeResolve(tr.doc, selection.from), safeResolve(tr.doc, selection.from+1)));
           tr.setMeta(plugin, { ...createDefaultState() });
