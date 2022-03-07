@@ -67,8 +67,10 @@ export function checkActive(state: EditorState, nodeType: NodeType, pos: number 
    * +2: outside &lt;node&gt;inside&lt;/node&gt;| outside
    * 
    *  0: false
+   * 
+   * 10 (010): &lt;node&gt;inside&lt;/node&gt;|&lt;node&gt;inside&lt;/node&gt; 
    */
-  activePos: -2 | -1 | 0 | 1 | 2
+  activePos: -2 | -1 | 0 | 1 | 2 | 10
 } {
 
   const { selection, doc } = state;
@@ -84,6 +86,10 @@ export function checkActive(state: EditorState, nodeType: NodeType, pos: number 
   console.debug('nodemark', 'checkActive', `currentPos ${currentPos}, left1stPos ${left1stPos}, right1Pos ${right1Pos}`);
   console.debug('nodemark', 'checkActive', `currentInNode ${currentInNode}, left1stInNode ${left1stInNode}, right1stInNode ${right1stInNode}`);
 
+  // <node>inside</node>|<node>inside</node>
+  if (!currentInNode && right1stInNode && left1stInNode) {
+    return { isActive: true, activePos: 10 };
+  }
   // outside |<node>inside</node> outside
   if (!currentInNode && right1stInNode) {
     return { isActive: true, activePos: -2 };

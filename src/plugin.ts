@@ -55,34 +55,49 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
         console.debug('nodemark: props->handleClick', `selection: from ${selection.from} to ${selection.to}`);
         console.debug('nodemark: props->handleClick', `args: pos ${pos}`);
         
-        const active = isActive(view.state, opts.nodeType, pos);
-        const [left1stInNode, currentInNode, right2ndInNode] = [-1, 0, +2].map(offset => nodeIsInSet(doc, pos+offset, opts.nodeType));
-
-        if (active) {
-          // when click empty node
-          // outside <node>|</node> outside -> outside <node></node>| outside, not outside <node>|</node> outside
-          // click twice same position
+        const { isActive, activePos }= checkActive(view.state, opts.nodeType, pos);
+        const [left2ndInNode, currentInNode, right2ndInNode] = [-2, 0, +2].map(offset => nodeIsInSet(doc, pos+offset, opts.nodeType));
+        const { samePos } = plugin.getState(view.state);
+        if (isActive) {
+          let nextSamePos: boolean | undefined;
           if (
-            !currentInNode && left1stInNode && 
+            // click twice same position
+            !samePos && 
             selection.from === pos && 
-            safeResolve(doc, pos-1).node().nodeSize === 2 && 
-            !plugin.getState(view.state).samePos
+            (
+              // RPRS-15 when click empty node
+              // -- click -- outside <node>|</node> outside 
+              // -actually-> outside <node></node>| outside
+              // - expect -> not outside <node>|</node> outside
+              (
+                activePos === +2 && 
+                safeResolve(doc, pos-1).node().nodeSize === 2
+              ) || 
+              // RPRS-22 when click between nodes
+              // -- click -- <node>inside</node>|<node>inside</node> 
+              // -actually-> <node>inside</node><node>|inside</node> 
+              // - expect -> <node>inside</node>|<node>inside</node> 
+              (
+                activePos === -1 && left2ndInNode
+              )
+            )
           ) {
-            const tr = view.state.tr.setSelection(new TextSelection(safeResolve(doc, pos-1))).setMeta(plugin, { ...createDefaultState(), samePos: true });
-            view.dispatch(tr);
-            return true;
+            nextSamePos = true;
           }
-          // RPRS-9 force to select ZeroWidthSpace to target position and remove at next macrotask event loop.
+
+          // RPRS-9 force to insert and select ZeroWidthSpace to target position and remove at next macrotask event loop.
           // same event stack and microtask cannot stop composition.
           // outside <span>insid_|</span> outside -> outside <span>insid_</span>█ outside ->
           // [next macrotask] -> outside <span>inside</span>█ outside - setTimeout -> outside <span>inside</span> outside
           // just move cursor make compositionend event set cursor next to compositionend charactor
-          const tr = view.state.tr.insertText('\u200b', pos);
-          tr.setSelection(new TextSelection(safeResolve(tr.doc, pos), safeResolve(tr.doc, pos+1)));
-          tr.setMeta(plugin, createDefaultState());
+          const newPos = pos - (nextSamePos?1:0);
+          const tr = view.state.tr.insertText('\u200b', newPos);
+          tr.setSelection(new TextSelection(safeResolve(tr.doc, newPos), safeResolve(tr.doc, newPos+1)));
+          tr.setMeta(plugin, { ...createDefaultState(), samePos: nextSamePos });
           view.dispatch(tr);
           setTimeout(() => {
-            const tr = view.state.tr.replace(pos, pos+1);
+            const tr = view.state.tr.replace(newPos, newPos+1);
+            tr.setMeta(plugin, { ...createDefaultState(), samePos: nextSamePos });
             view.dispatch(tr);
           }, 0);
           return true;
@@ -90,6 +105,7 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
 
         // click |<p><node>inside</node> outside -> pos == |<p><node>inside</node> outside, not <p>|<node>inside</node> outside
         // check except outside| <node>inside</node> outside -> outside |<node>inside</node> outside
+        // maybe RPRS-11 is not affacted from RPRS-9
         if (!currentInNode && right2ndInNode && !(view.domAtPos(selection.from).node instanceof Text)) {
           const tr = view.state.tr.setSelection(new TextSelection(safeResolve(doc, pos+1))).setMeta(plugin, createDefaultState());
           view.dispatch(tr);
@@ -108,6 +124,8 @@ export function getNodemarkPlugin(opts: NodemarkOption) {
           
           if (!isActive ||
             !(
+              // RPRS-22 domAtPosLeft and actualSelectionDom is same (strange...)
+              activePos === 10 ||
               (activePos === -2 && domAtPosLeft !== actualSelectionDom) ||
               (activePos === -1) ||
               (activePos === +1 && domAtPosLeft !== actualSelectionDom) ||
